@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include <cuda_runtime.h>
 
 #define N 10000000
@@ -42,12 +40,17 @@ float vecAdd_gpu(float *h_a, float *h_b, float *h_c, size_t size) {
     cudaMemcpy(d_b, h_b, size, cudaMemcpyHostToDevice);
 
     // perform addition
-    const unsigned int numThreadsPerBlock = 256;
-    const unsigned int numBlocks = (N + numThreadsPerBlock - 1) / numThreadsPerBlock;
+    const unsigned int BLOCK_SIZE = 256;
+    // N = 1024, BLOCK_SIZE = 256, num_blocks = 4
+    // (N + BLOCK_SIZE - 1) / BLOCK_SIZE = ( (1024 + 256 - 1) / 256 ) = 1279 / 256 = 4 rounded 
+    // N = 1025, BLOCK_SIZE = 256, num_blocks = 4
+    // (N + BLOCK_SIZE - 1) / BLOCK_SIZE = ( (1025 + 256 - 1) / 256 ) = 1280 / 256 = 4 rounded 
+    const unsigned int numBlocks = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    double start_time1 = get_time();
-    vecAdd_kernel<<<numBlocks, numThreadsPerBlock>>>(d_a, d_b, d_c);
-    double end_time1 = get_time();
+    double start_time = get_time();
+    vecAdd_kernel<<<numBlocks, BLOCK_SIZE>>>(d_a, d_b, d_c);
+    cudaDeviceSynchronize();  // wait for GPU to finish
+    double end_time = get_time();
 
     // copy from GPU to CPU
     cudaMemcpy(h_c, d_c, size, cudaMemcpyDeviceToHost);
@@ -57,7 +60,7 @@ float vecAdd_gpu(float *h_a, float *h_b, float *h_c, size_t size) {
     cudaFree(d_b);
     cudaFree(d_c);
     
-    return end_time1 - start_time1;
+    return end_time - start_time;
 }
 
 int main() {
@@ -74,14 +77,28 @@ int main() {
     init_vector(h_a);
     init_vector(h_b);
 
-    double start_time = get_time();
-    vecAdd_cpu(h_a, h_b, h_c);
-    double end_time = get_time();
-    printf("CPU Time: %f\n", end_time - start_time);
+    printf("Benchmarking CPU implementation...\n");
+    double cpu_total_time = 0.0;
+    for (int i = 0; i < 5; i++) {
+        double start_time = get_time();
+        vecAdd_cpu(h_a, h_b, h_c);
+        double end_time = get_time();
+        cpu_total_time += end_time - start_time;
+    }
+    double cpu_avg_time = cpu_total_time / 5.0;
+    printf("CPU Time: %f\n", cpu_avg_time);
 
-    double total_time = vecAdd_gpu(h_a, h_b, h_c, size);
-    printf("GPU Time: %f\n", total_time);
+    // Benchmark GPU implementation
+    printf("Benchmarking GPU implementation...\n");
+    double gpu_total_time = 0.0;
+    for (int i = 0; i < 5; i++) {
+        gpu_total_time += vecAdd_gpu(h_a, h_b, h_c, size);
+    }
+    double gpu_avg_time = gpu_total_time / 5.0;
+    printf("GPU Time: %f\n", gpu_avg_time);
 
+    printf("Speedup: %fx\n", cpu_avg_time / gpu_avg_time);
+    
     free(h_a);
     free(h_b);
     free(h_c);
