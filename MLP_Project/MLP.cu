@@ -423,11 +423,11 @@ void train(NeuralNetwork *nn, float *X_train, int *y_train) {
 
             update_weights(nn);
 
-            if ((batch + 1) % 100 == 0 || (epoch == 0 && batch == 0)) {
-                printf("Epoch %d/%d, Iter %d/%d, Loss: %.4f, Accuracy: %.2f%%\n", 
-                       epoch + 1, EPOCHS, batch + 1, NUM_BATCHES, total_loss / (batch + 1), 
-                       100.0f * correct / ((batch + 1) * BATCH_SIZE));
-            }
+            // if ((batch + 1) % 100 == 0 || (epoch == 0 && batch == 0)) {
+            //     printf("Epoch %d/%d, Iter %d/%d, Loss: %.4f, Accuracy: %.2f%%\n", 
+            //            epoch + 1, EPOCHS, batch + 1, NUM_BATCHES, total_loss / (batch + 1), 
+            //            100.0f * correct / ((batch + 1) * BATCH_SIZE));
+            // }
         }
         
         printf("Epoch %d/%d completed, Loss: %.4f, Accuracy: %.2f%%\n", 
